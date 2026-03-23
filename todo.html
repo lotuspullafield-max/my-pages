@@ -1,220 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>Todo</title>
-
-  <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background: black;
-      color: white;
-    }
-
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px;
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    .back {
-      background: white;
-      color: black;
-      border-radius: 10px;
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-
-    .container {
-      padding: 20px;
-    }
-
-    .card {
-      background: white;
-      color: black;
-      border-radius: 20px;
-      padding: 20px;
-    }
-
-    input {
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      margin-bottom: 10px;
-    }
-
-    #task {
-      width: 60%;
-    }
-
-    #date {
-      width: 35%;
-    }
-
-    button {
-      padding: 10px;
-      border: none;
-      border-radius: 10px;
-      background: #4a90e2;
-      color: white;
-      cursor: pointer;
-    }
-
-    li {
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .delete {
-      background: red;
-      border-radius: 8px;
-      padding: 5px 10px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; background: black; color: white; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 20px; font-size: 20px; font-weight: bold; }
+        .back { background: white; color: black; border-radius: 10px; padding: 5px 10px; cursor: pointer; }
+        .container { padding: 20px; }
+        .card { background: white; color: black; border-radius: 20px; padding: 20px; }
+        input { padding: 12px; border-radius: 10px; border: 1px solid #ccc; margin-bottom: 10px; font-size: 16px; }
+        #task { width: 100%; box-sizing: border-box; }
+        #date { width: 100%; box-sizing: border-box; }
+        button.add-btn { padding: 12px; border: none; border-radius: 10px; background: #4a90e2; color: white; cursor: pointer; width: 100%; font-weight: bold; margin-top: 5px; }
+        ul { padding: 0; list-style: none; }
+        li { margin-top: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .delete { background: #ff3b30; color: white; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+        .task-left { display: flex; align-items: center; gap: 10px; }
+    </style>
 </head>
-
 <body>
-
-<header>
-  Todo
-  <div class="back" onclick="location.href='index.html'">← ホーム</div>
-</header>
-
+<header>Todo<div class="back" onclick="location.href='index.html'">← 戻る</div></header>
 <div class="container">
   <div class="card">
-
     <input id="task" placeholder="課題を入力">
     <input type="date" id="date">
-    <button onclick="addTask()">追加</button>
-
+    <button class="add-btn" onclick="addTask()">追加する</button>
     <ul id="list"></ul>
-
   </div>
 </div>
-
 <script>
-Notification.requestPermission();
-
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-
-// AI優先度
 function getPriority(task){
   if(task.date === "期限なし") return "🟢";
-
-  const today = new Date();
-  const deadline = new Date(task.date);
-  const diff = (deadline - today) / (1000 * 60 * 60 * 24);
-
+  const diff = (new Date(task.date) - new Date()) / (1000 * 60 * 60 * 24);
   if(diff <= 1) return "🔥";
   if(diff <= 3) return "⚠️";
   return "🟢";
 }
-
-// 通知
-function notify(msg){
-  if(Notification.permission === "granted"){
-    new Notification("課題リマインド", { body: msg });
-  }
-}
-
-// 締切チェック
-function checkDeadlines(){
-  const today = new Date().toISOString().split("T")[0];
-
-  tasks.forEach(task => {
-    if(task.date === today && !task.done){
-      notify("今日締切：" + task.text);
-    }
-  });
-}
-
-// 表示
 function render(){
   const list = document.getElementById("list");
   list.innerHTML = "";
-
-  tasks
-    .sort((a, b) => new Date(a.date) - new Date(b.date))
-    .forEach((task, index) => {
-
+  tasks.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach((task, index) => {
       const li = document.createElement("li");
-
       const left = document.createElement("div");
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = task.done;
-
-      checkbox.onchange = () => {
-        tasks[index].done = checkbox.checked;
-        localStorage.setItem("tasks", JSON.stringify(tasks));
-        render();
-      };
-
+      left.className = "task-left";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = task.done;
+      cb.onchange = () => { tasks[index].done = cb.checked; localStorage.setItem("tasks", JSON.stringify(tasks)); render(); };
       const span = document.createElement("span");
-      span.textContent = getPriority(task) + " " + task.text + "（" + task.date + "）";
-
-      if(task.done){
-        span.style.textDecoration = "line-through";
-        span.style.opacity = "0.5";
-      }
-
-      const today = new Date().toISOString().split("T")[0];
-      if(task.date < today && task.date !== "期限なし" && !task.done){
-        span.style.color = "red";
-      }
-
-      left.appendChild(checkbox);
+      span.textContent = `${getPriority(task)} ${task.text}`;
+      if(task.done) { span.style.textDecoration = "line-through"; span.style.opacity = "0.5"; }
+      left.appendChild(cb);
       left.appendChild(span);
-
       const del = document.createElement("button");
       del.textContent = "削除";
       del.className = "delete";
-
-      del.onclick = () => {
-        tasks.splice(index, 1);
-        localStorage.setItem("tasks", JSON.stringify(tasks));
-        render();
-      };
-
+      del.onclick = () => { tasks.splice(index, 1); localStorage.setItem("tasks", JSON.stringify(tasks)); render(); };
       li.appendChild(left);
       li.appendChild(del);
-
       list.appendChild(li);
     });
-
-  checkDeadlines();
 }
-
-// 追加
 function addTask(){
+  // iPhone対策：クリック時に通知許可を確認
+  if(window.Notification && Notification.permission === "default") Notification.requestPermission();
   const text = document.getElementById("task").value;
   const date = document.getElementById("date").value;
-
-  if(text === "") return;
-
-  tasks.push({
-    text: text,
-    date: date ? date : "期限なし",
-    done: false
-  });
-
+  if(!text) return;
+  tasks.push({ text, date: date || "期限なし", done: false });
   localStorage.setItem("tasks", JSON.stringify(tasks));
-
   document.getElementById("task").value = "";
   document.getElementById("date").value = "";
-
   render();
 }
-
 render();
 </script>
-
 </body>
 </html>
