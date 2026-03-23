@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SCHOOL LINK">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登録完了 - SCHOOL LINK</title>
+    <style>
+        body { background: #000; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .box { background: #1c1c1e; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; }
+        h2 { text-align: center; margin-bottom: 20px; }
+        label { font-size: 12px; color: #8e8e93; margin-top: 10px; display: block; }
+        input, select { width: 100%; padding: 15px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #2c2c2e; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; border-radius: 10px; border: none; background: #32d74b; color: #000; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .role-box { display: flex; gap: 10px; margin: 10px 0; }
+        .role-btn { flex: 1; padding: 10px; border: 1px solid #333; background: #1c1c1e; color: white; border-radius: 10px; cursor: pointer; text-align: center; font-size: 14px; }
+        .role-btn.active { background: #0a84ff; border-color: #0a84ff; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>プロフィール設定</h2>
+        
+        <label>あなたの役割</label>
+        <div class="role-box">
+            <div id="btn-student" class="role-btn active" onclick="setRole('student')">生徒</div>
+            <div id="btn-school" class="role-btn" onclick="setRole('school')">先生</div>
+        </div>
+
+        <label>お名前（表示名）</label>
+        <input type="text" id="userName" placeholder="例：たろう">
+
+        <label>パスワードを設定</label>
+        <input type="password" id="password" placeholder="6文字以上">
+
+        <button id="completeBtn">登録を完了してはじめる</button>
+        <p id="msg" style="font-size: 12px; color: #ff453a; text-align: center; margin-top: 10px;"></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, isSignInWithEmailLink, signInWithEmailLink, updatePassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9l8I7LB-n0F3bx22_5SHwTaQu1JtZ1dk",
+            authDomain: "school-link-log-in.firebaseapp.com",
+            projectId: "school-link-log-in",
+            storageBucket: "school-link-log-in.firebasestorage.app",
+            messagingSenderId: "973480393850",
+            appId: "1:973480393850:web:11aa0cb8477d928a6a8fc3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let selectedRole = 'student';
+        window.setRole = (role) => {
+            selectedRole = role;
+            document.getElementById('btn-student').className = 'role-btn ' + (role === 'student' ? 'active' : '');
+            document.getElementById('btn-school').className = 'role-btn ' + (role === 'school' ? 'active' : '');
+        };
+
+        document.getElementById('completeBtn').onclick = async () => {
+            const name = document.getElementById('userName').value;
+            const pass = document.getElementById('password').value;
+            const msg = document.getElementById('msg');
+
+            if (!name || pass.length < 6) {
+                msg.innerText = "名前を入力し、パスワードは6文字以上にしてください。";
+                return;
+            }
+
+            // 1. メールリンクの妥当性チェック
+            if (isSignInWithEmailLink(auth, window.location.href)) {
+                let email = window.localStorage.getItem('emailForSignIn');
+                if (!email) {
+                    email = window.prompt('確認のため、もう一度メールアドレスを入力してください');
+                }
+
+                try {
+                    // 2. ログイン実行
+                    const result = await signInWithEmailLink(auth, email, window.location.href);
+                    const user = result.user;
+                    window.localStorage.removeItem('emailForSignIn');
+
+                    // 3. パスワードと名前を設定
+                    await updatePassword(user, pass);
+                    await updateProfile(user, { displayName: name });
+
+                    // 4. 今まで通りFirestoreにユーザー情報を保存
+                    await setDoc(doc(db, "users", user.uid), {
+                        name: name,
+                        role: selectedRole,
+                        createdAt: new Date()
+                    });
+
+                    // 5. 役割を保存して各ホームへ
+                    localStorage.setItem('user_role', selectedRole);
+                    window.location.href = (selectedRole === 'school') ? "school_home.html" : "index.html";
+
+                } catch (error) {
+                    msg.innerText = "エラーが発生しました: " + error.message;
+                }
+            } else {
+                msg.innerText = "リンクが無効です。もう一度メールからやり直してください。";
+            }
+        };
+    </script>
+</body>
+</html>

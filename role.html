@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SCHOOL LINK">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>役割選択 - SCHOOL LINK</title>
+    <style>
+        body { margin:0; background:#000; color:#fff; font-family:sans-serif; display:flex; justify-content:center; align-items:center; height:100vh; }
+        .card { width:90%; max-width:400px; text-align:center; }
+        .btn { background:#1c1c1e; border:1px solid #363636; border-radius:15px; padding:20px; margin-bottom:15px; cursor:pointer; }
+        .btn:hover { border-color:#0a84ff; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>どちらで利用しますか？</h1>
+    <div class="btn" onclick="setRole('student')"><b>生徒として参加</b></div>
+    <div class="btn" onclick="setRole('school')"><b>学校・先生として参加</b></div>
+</div>
+<script>
+    function setRole(role) {
+        localStorage.setItem('user_role', role);
+        if(role === 'student') window.location.replace("index.html");
+        else window.location.replace("school_home.html");
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SCHOOL LINK">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>先生ホーム - SCHOOL LINK</title>
+    <style>
+        :root {
+            --bg: #000;
+            --card: #1c1c1e;
+            --accent: #32d74b; /* 先生用は緑 */
+            --text: #fff;
+            --sub: #8e8e93;
+            --notice: #ff9500; /* 連絡投稿用 */
+        }
+        body {
+            margin: 0;
+            font-family: -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 50px 20px 20px;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid #2c2c2e;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 0 15px;
+            box-sizing: border-box;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 18px;
+            text-align: center;
+        }
+        .stat-value { font-size: 24px; font-weight: bold; color: var(--accent); }
+        .stat-label { font-size: 12px; color: var(--sub); }
+
+        /* アクションボタン */
+        .action-btn {
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            width: 100%;
+            font-weight: bold;
+            font-size: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+        .btn-chat { background: #fff; color: #000; }
+        .btn-notice { background: var(--notice); color: #fff; }
+        .action-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+        .section-title { font-size: 18px; margin: 25px 0 12px; font-weight: bold; display: flex; justify-content: space-between; }
+        .student-list { background: var(--card); border-radius: 20px; overflow: hidden; }
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid #2c2c2e;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 style="font-size: 22px; margin: 0;">SCHOOL LINK <span style="color: var(--accent); font-size: 12px;">Teacher</span></h1>
+        <div class="user-profile" id="logoutBtn">
+            <span id="userIcon">👤</span>
+            <span id="userDisplay">...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">--</div>
+                <div class="stat-label">生徒数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">--</div>
+                <div class="stat-label">今日の稼働</div>
+            </div>
+        </div>
+
+        <a href="chat_list.html" class="action-btn btn-chat">💬 トーク一覧（個別連絡）</a>
+        <button onclick="postAnnouncement()" class="action-btn btn-notice">📢 全生徒へ一斉連絡</button>
+
+        <div class="section-title">
+            <span>生徒の最新状況</span>
+            <span style="font-size: 12px; color: var(--sub); font-weight: normal;">リアルタイム</span>
+        </div>
+        
+        <div class="student-list" id="studentList">
+            <div style="padding: 20px; color: var(--sub); text-align: center; font-size: 14px;">
+                生徒のデータを読み込んでいます...
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9l8I7LB-n0F3bx22_5SHwTaQu1JtZ1dk",
+            authDomain: "school-link-log-in.firebaseapp.com",
+            projectId: "school-link-log-in",
+            storageBucket: "school-link-log-in.firebasestorage.app",
+            messagingSenderId: "973480393850",
+            appId: "1:973480393850:web:11aa0cb8477d928a6a8fc3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                const role = localStorage.getItem('user_role');
+                if (role !== 'school') { window.location.replace("index.html"); return; }
+                
+                document.getElementById('userDisplay').innerText = user.displayName || "先生";
+                loadStudents();
+            } else {
+                window.location.href = "login.html";
+            }
+        });
+
+        // 🆕 全生徒への連絡投稿機能
+        window.postAnnouncement = async () => {
+            const content = prompt("全生徒のホーム画面に表示するメッセージを入力してください");
+            if (!content || content.trim() === "") return;
+
+            try {
+                await addDoc(collection(db, "announcements"), {
+                    content: content,
+                    createdAt: serverTimestamp(),
+                    senderName: auth.currentUser.displayName || "先生"
+                });
+                alert("一斉連絡を送信しました！");
+            } catch (e) {
+                console.error(e);
+                alert("送信に失敗しました。");
+            }
+        };
+
+        // 生徒一覧の簡易読み込み（後でタイマーデータと連携）
+        async function loadStudents() {
+            const listEl = document.getElementById('studentList');
+            const q = query(collection(db, "users"), where("role", "==", "student"));
+            const snap = await getDocs(q);
+            
+            let html = "";
+            snap.forEach(doc => {
+                const data = doc.data();
+                html += `
+                    <div class="student-item">
+                        <span>${data.name || "生徒"}</span>
+                        <span style="color:var(--sub); font-size:12px;">データなし</span>
+                    </div>
+                `;
+            });
+            listEl.innerHTML = html || '<div style="padding:20px; color:var(--sub);">生徒がまだ登録されていません</div>';
+        }
+
+        // ログアウト
+        document.getElementById('logoutBtn').onclick = () => {
+            if(confirm("ログアウトしますか？")) {
+                signOut(auth).then(() => {
+                    localStorage.removeItem('user_role');
+                    window.location.href = "login.html";
+                });
+            }
+        };
+    </script>
+</body>
+</html>
