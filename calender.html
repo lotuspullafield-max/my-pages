@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>予定</title>
+
+<style>
+body{margin:0;background:black;color:white;font-family:sans-serif;}
+header{display:flex;justify-content:space-between;padding:20px;}
+.back{background:white;color:black;padding:5px 10px;border-radius:10px;}
+.container{padding:20px;}
+.card{background:white;color:black;padding:20px;border-radius:20px;}
+</style>
+</head>
+
+<body>
+
+<header>
+予定
+<div class="back" onclick="location.href='index.html'">←</div>
+</header>
+
+<div class="container">
+<div class="card">
+
+<input id="event" placeholder="予定">
+<input type="date" id="date">
+<button onclick="addEvent()">追加</button>
+
+<ul id="list"></ul>
+
+</div>
+</div>
+
+<script>
+let events=JSON.parse(localStorage.getItem("events"))||[];
+
+function render(){
+ const list=document.getElementById("list");
+ list.innerHTML="";
+
+ events.sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+ events.forEach((e,i)=>{
+  const li=document.createElement("li");
+  li.textContent=e.date+" "+e.text;
+
+  const del=document.createElement("button");
+  del.textContent="削除";
+  del.onclick=()=>{
+   events.splice(i,1);
+   localStorage.setItem("events",JSON.stringify(events));
+   render();
+  };
+
+  li.appendChild(del);
+  list.appendChild(li);
+ });
+}
+
+function addEvent(){
+ const text=document.getElementById("event").value;
+ const date=document.getElementById("date").value;
+
+ if(!text||!date) return;
+
+ events.push({text,date});
+ localStorage.setItem("events",JSON.stringify(events));
+
+ document.getElementById("event").value="";
+ document.getElementById("date").value="";
+
+ render();
+}
+
+render();
+</script>
+
+</body>
+</html>

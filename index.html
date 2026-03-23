@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SCHOOL LINK</title>
+
+<style>
+body { margin:0; font-family:sans-serif; background:black; color:white; }
+header { text-align:center; padding:20px; font-size:28px; font-weight:bold; }
+.container { display:flex; justify-content:center; padding:20px; }
+.card { background:white; color:black; border-radius:20px; padding:20px; width:90%; max-width:400px; }
+.grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; }
+.item { background:#f0f0f0; border-radius:15px; padding:15px; text-align:center; cursor:pointer; }
+.today { margin-top:20px; background:#222; color:white; padding:15px; border-radius:15px; }
+</style>
+</head>
+
+<body>
+
+<header>SCHOOL LINK</header>
+
+<div class="container">
+<div class="card">
+
+<div class="grid">
+<div class="item">学校</div>
+<div class="item" onclick="location.href='study.html'">勉強</div>
+<div class="item" onclick="location.href='calendar.html'">予定</div>
+<div class="item" onclick="location.href='todo.html'">Todo</div>
+<div class="item">トーク</div>
+<div class="item">連絡</div>
+</div>
+
+<div class="today">
+<h3>今日やるべきこと（AI）</h3>
+<ul id="todayList"></ul>
+</div>
+
+</div>
+</div>
+
+<script>
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+// AI優先順位
+function getPriority(task){
+ if(task.date==="期限なし") return 3;
+ const diff = (new Date(task.date)-new Date())/(1000*60*60*24);
+ if(diff<=1) return 1;
+ if(diff<=3) return 2;
+ return 3;
+}
+
+function showToday(){
+ const list=document.getElementById("todayList");
+ list.innerHTML="";
+
+ tasks
+  .filter(t=>!t.done)
+  .sort((a,b)=>getPriority(a)-getPriority(b))
+  .slice(0,5)
+  .forEach(t=>{
+    const li=document.createElement("li");
+    li.textContent=t.text;
+    list.appendChild(li);
+  });
+}
+
+showToday();
+</script>
+
+</body>
+</html>
