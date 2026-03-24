@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>クラス連絡 - SCHOOL LINK</title>
+    <style>
+        :root {
+            --bg: #000;
+            --card: #1c1c1e;
+            --accent: #0a84ff;
+            --text: #fff;
+            --sub: #8e8e93;
+        }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* --- クラスリンク（ロック）画面 --- */
+        #loginOverlay {
+            position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+            display: flex; align-items: center; justify-content: center; padding: 25px;
+        }
+        .login-box {
+            background: var(--card);
+            padding: 40px 30px;
+            border-radius: 35px;
+            width: 100%;
+            max-width: 340px;
+            text-align: center;
+            border: 1px solid #2c2c2e;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+        .login-box h2 { margin: 0; font-size: 26px; font-weight: 800; }
+        .login-box p { color: var(--sub); font-size: 14px; margin: 10px 0 30px; line-height: 1.4; }
+        
+        #codeIn {
+            width: 100%; box-sizing: border-box; padding: 18px; border-radius: 18px;
+            border: none; background: #2c2c2e; color: #fff; font-size: 28px;
+            font-weight: bold; text-align: center; letter-spacing: 5px; outline: none;
+            margin-bottom: 20px;
+        }
+        .btn-link {
+            width: 100%; padding: 18px; border-radius: 18px; border: none;
+            background: var(--accent); color: #fff; font-size: 17px; font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* --- メインコンテンツ（連絡一覧） --- */
+        header {
+            padding: 60px 20px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .back-btn { color: var(--accent); text-decoration: none; font-size: 17px; font-weight: 500; }
+        
+        .container { padding: 0 20px 20px; flex: 1; overflow-y: auto; }
+        .page-title { font-size: 32px; font-weight: 800; margin: 10px 0 25px; }
+
+        /* タイル（カード）デザイン */
+        .notice-tile {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 22px;
+            margin-bottom: 16px;
+            border: 1px solid #2c2c2e;
+            transition: transform 0.1s;
+            animation: slideUp 0.4s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .tile-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .tile-badge {
+            background: rgba(10, 132, 255, 0.15);
+            color: var(--accent);
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 8px;
+            text-transform: uppercase;
+        }
+        .tile-body { font-size: 17px; line-height: 1.5; font-weight: 500; color: #fff; white-space: pre-wrap; }
+        .tile-footer {
+            margin-top: 15px;
+            font-size: 12px;
+            color: var(--sub);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--sub);
+            margin-top: 80px;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2>Class Link</h2>
+            <p>先生から教えられた<br>5桁のコードを入力してください</p>
+            <input type="text" id="codeIn" placeholder="00000" maxlength="5" spellcheck="false">
+            <button id="loginBtn" class="btn-link">リンクを開始</button>
+            <p id="errorMsg" style="color:#ff453a; display:none; margin-top:15px; font-weight: 600;">コードが違います</p>
+        </div>
+    </div>
+
+    <header>
+        <a href="index.html" class="back-btn">✕ 閉じる</a>
+        <div style="font-size: 12px; font-weight: bold; color: var(--accent); letter-spacing: 1px;">2年A組</div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">最新の連絡</h1>
+        
+        <div id="noticeList">
+            <div class="empty-state">読み込み中...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // index.html と共通の Firebase 設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9l8I7LB-n0F3bx22_5SHwTaQu1JtZ1dk",
+            authDomain: "school-link-log-in.firebaseapp.com",
+            projectId: "school-link-log-in",
+            storageBucket: "school-link-log-in.firebasestorage.app",
+            messagingSenderId: "973480393850",
+            appId: "1:973480393850:web:11aa0cb8477d928a6a8fc3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- クラスコード認証 ---
+        const VALID_CODE = "ABC01"; 
+        const loginOverlay = document.getElementById('loginOverlay');
+
+        window.onload = () => {
+            if (localStorage.getItem('linkedClass') === VALID_CODE) {
+                loginOverlay.style.display = 'none';
+                startListening();
+            }
+        };
+
+        document.getElementById('loginBtn').onclick = () => {
+            const input = document.getElementById('codeIn').value.toUpperCase().trim();
+            if (input === VALID_CODE) {
+                localStorage.setItem('linkedClass', VALID_CODE);
+                loginOverlay.style.display = 'none';
+                startListening();
+            } else {
+                document.getElementById('errorMsg').style.display = 'block';
+            }
+        };
+
+        // --- Firebase リアルタイム受信 ---
+        function startListening() {
+            const noticeList = document.getElementById('noticeList');
+            // 最新5件を取得
+            const q = query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(5));
+
+            onSnapshot(q, (snapshot) => {
+                noticeList.innerHTML = "";
+                
+                if (snapshot.empty) {
+                    noticeList.innerHTML = '<div class="empty-state">新しい連絡はありません。</div>';
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const d = data.createdAt ? data.createdAt.toDate() : new Date();
+                    const dateStr = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
+                    
+                    const tile = document.createElement('div');
+                    tile.className = 'notice-tile';
+                    tile.innerHTML = `
+                        <div class="tile-header">
+                            <span class="tile-badge">Latest</span>
+                        </div>
+                        <div class="tile-body">${data.content}</div>
+                        <div class="tile-footer">${dateStr} 更新</div>
+                    `;
+                    noticeList.appendChild(tile);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
